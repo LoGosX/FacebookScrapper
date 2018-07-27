@@ -105,11 +105,7 @@ def main():
         #friends_elements = browser.find_elements_by_xpath('//li/div[@data-testid="friend_list_item"]/a[@href]')
         friends = get_all_friends(browser)
 
-        i = 0
         for friend in friends:
-            if i >= 10:
-                break
-            i += 1
             if friend['profile'].startswith('https://www.facebook.com/profile.php?id='):
                 browser.get(friend['profile'] + '&sk=likes')
             else:
@@ -121,12 +117,12 @@ def main():
 
         for name in (a['name'] for a in friends):
             print(name)
-        with open('dane.json', 'r+') as f:
-            f.truncate(0)
+
+    finally:
+        with open(f"dane_{time.strftime('%d-%m-%Y-%H-%M-%S')}.json", 'a+') as f:
             current_data = []
             current_data.extend(friend for friend in friends)
             f.write(json.dumps(current_data))
-    finally:
         browser.quit()
 
 
