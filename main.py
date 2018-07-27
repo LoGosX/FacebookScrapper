@@ -110,7 +110,10 @@ def main():
             if i >= 10:
                 break
             i += 1
-            browser.get(friend['profile'] + '/likes')
+            if friend['profile'].startswith('https://www.facebook.com/profile.php?id='):
+                browser.get(friend['profile'] + '&sk=likes')
+            else:
+                browser.get(friend['profile'] + '/likes')
             time.sleep(1)
             scroll_down(browser)
             friend['likes'] = get_likes(browser)
