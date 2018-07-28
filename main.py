@@ -59,21 +59,35 @@ def get_all_friends(browser):
 
 def get_likes(browser):
     #likes_elements = browser.find_elements_by_css_selector('.fsl.fwb.fcb')
-    likes_elements = browser.find_elements_by_xpath('//div[@class="fsl fwb fcb"]/a')
+    likes_elements = browser.find_elements_by_xpath('//div[@class="fsl fwb fcb"]')
     data = []
     for element in likes_elements:
+        text_and_href_element = element.find_element_by_xpath('./a')
+        text = text_and_href_element.text
+        href = text_and_href_element.get_attribute('href')
+        target_type = element.find_element_by_xpath('../div[2]').text
         data.append({
-            'text' : element.text,
-            'href': element.get_attribute('href')
+            'text' : text
+            'type' : target_type,
+            'href': href
         })
     return data
 
-def create_driver():
+def create_chrome_options():
     chrome_options = webdriver.ChromeOptions()
-    prefs = {"profile.default_content_setting_values.notifications" : 2}
+    prefs = {
+        "profile.managed_default_content_settings.images": 2, #disable images
+        "profile.default_content_setting_values.notifications": 2 #disable notifications
+        }
+    # https://stackoverflow.com/questions/28070315/python-disable-images-in-selenium-google-chromedriver
     chrome_options.add_experimental_option("prefs",prefs)
+    return chrome_options
+
+def create_driver():
+    chrome_options = create_chrome_options()
     path_to_chromedrive = "./chromedriver"
     return webdriver.Chrome(executable_path = path_to_chromedrive, chrome_options=chrome_options)
+
 
 def main():
     try:    
