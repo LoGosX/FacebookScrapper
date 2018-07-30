@@ -1,7 +1,7 @@
 from selenium import webdriver
-from bs4 import BeautifulSoup as bs
 import time
 import json
+import os
 
 def get_name(driver, user_profile):
     current_url = driver.current_url
@@ -16,7 +16,7 @@ def login(driver, email, password):
     print('Locating elements')
     login_element = driver.find_element_by_id("email")
     password_element = driver.find_element_by_id("pass")
-    login_button = driver.find_element_by_id("u_0_2")
+    login_button = driver.find_element_by_xpath("//input[@value='Log In']")
 
     print('Logging in')
     login_element.clear()
@@ -67,9 +67,9 @@ def get_likes(browser):
         href = text_and_href_element.get_attribute('href')
         target_type = element.find_element_by_xpath('../div[2]').text
         data.append({
-            'text' : text
+            'text' : text,
             'type' : target_type,
-            'href': href
+            'href': href,
         })
     return data
 
@@ -116,29 +116,50 @@ def main():
         scroll_down(browser)
 
         print('Getting all friends')
-        #friends_elements = browser.find_elements_by_xpath('//li/div[@data-testid="friend_list_item"]/a[@href]')
         friends = get_all_friends(browser)
+        
+        old_dane = [f for f in os.listdir('.') if f.startswith('dane')]
+        if len(old_dane) > 0:
+            with open(sorted(old_dane)[-1], 'r') as od:
+                text = od.read()
+                if text is not '':
+                    current_data = json.loads(text)
+                else:
+                    current_data = []
+        else:
+            current_data = []
 
+        done_profiles = [user['profile'] for user in current_data]
         for friend in friends:
-            if friend['profile'].startswith('https://www.facebook.com/profile.php?id='):
-                browser.get(friend['profile'] + '&sk=likes')
+            print('Processing ' + friend['name'], end = '... ')
+            if not friend['profile'] in done_profiles:
+                if friend['profile'].startswith('https://www.facebook.com/profile.php?id='):
+                    browser.get(friend['profile'] + '&sk=likes')
+                else:
+                    browser.get(friend['profile'] + '/likes')
+                scroll_down(browser)
+                current_data.append({
+                    'name' : friend['name'],
+                    'profile': friend['profile'],
+                    'likes': get_likes(browser),
+                })
+                done_profiles.append(friend['profile'])
+                print('Done')
             else:
-                browser.get(friend['profile'] + '/likes')
-            time.sleep(1)
-            scroll_down(browser)
-            friend['likes'] = get_likes(browser)
-
+                print('Skipped')
 
         for name in (a['name'] for a in friends):
             print(name)
 
     finally:
-        with open(f"dane_{time.strftime('%d-%m-%Y-%H-%M-%S')}.json", 'a+') as f:
-            current_data = []
-            current_data.extend(friend for friend in friends)
-            f.write(json.dumps(current_data))
+        try:
+            new_file = f"dane_{time.strftime('%d-%m-%Y-%H-%M-%S')}.json"
+            with open(new_file, 'a+') as f:
+                json.dump(current_data, f)
+        except:
+            os.remove(new_file)
         browser.quit()
-
+        
 
 if __name__ == '__main__':
     main()
