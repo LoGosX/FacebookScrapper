@@ -88,7 +88,7 @@ def create_driver():
     chrome_options = create_chrome_options()
     system = platform.system() 
     if system == 'Linux':
-        path_to_chromedrive = "chromedriver"
+        path_to_chromedrive = "./chromedriver"
     elif system == 'Windows':
         path_to_chromedrive = 'chromedriver.exe'
     else:
