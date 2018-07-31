@@ -17,7 +17,10 @@ def login(driver, email, password):
     print('Locating elements')
     login_element = driver.find_element_by_id("email")
     password_element = driver.find_element_by_id("pass")
-    login_button = driver.find_element_by_xpath("//input[@value='Log In']")
+    try:
+        login_button = driver.find_element_by_xpath("//input[@value='Log In']")
+    except:
+        login_button = driver.find_element_by_xpath("//input[@value='Zaloguj się']")
 
     print('Logging in')
     login_element.clear()
@@ -110,7 +113,12 @@ def main():
             print("Looks like you don't have personal_data.txt file created or it is corrupted. Enter your facebook email and password and I'll create it for you")
             email = input('Email: ')
             password = input('Password: ')
-            os.remove('personal_data.txt')
+            
+            try:
+                os.remove('personal_data.txt')
+            except:
+                pass
+
             with open('personal_data.txt', 'a+') as f:
                 f.write(json.dumps({'login': email, 'password': password}))
 
