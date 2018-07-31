@@ -17,10 +17,8 @@ def login(driver, email, password):
     print('Locating elements')
     login_element = driver.find_element_by_id("email")
     password_element = driver.find_element_by_id("pass")
-    try:
-        login_button = driver.find_element_by_xpath("//input[@value='Log In']")
-    except:
-        login_button = driver.find_element_by_xpath("//input[@value='Zaloguj się']")
+    
+    login_button = driver.find_element_by_xpath("//input[@data-testid='royal_login_button']")
 
     print('Logging in')
     login_element.clear()
@@ -134,7 +132,8 @@ def main():
         name,surname = get_name(browser, browser.current_url)
 
         print('Going into friends tab')
-        browser.get('https://www.facebook.com/' + name.lower() + '.' + surname.lower() + '/friends/')
+        browser.get('https://www.facebook.com/profile')
+        browser.get(browser.current_url[:-2] + '/friends/')
 
         time.sleep(2)
         print('Scrolling down')
