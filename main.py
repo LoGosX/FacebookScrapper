@@ -2,6 +2,7 @@ from selenium import webdriver
 import time
 import json
 import os
+import platform
 
 def get_name(driver, user_profile):
     current_url = driver.current_url
@@ -85,17 +86,33 @@ def create_chrome_options():
 
 def create_driver():
     chrome_options = create_chrome_options()
-    path_to_chromedrive = "./chromedriver"
+    system = platform.system() 
+    if system == 'Linux':
+        path_to_chromedrive = "chromedriver"
+    elif system == 'Windows':
+        path_to_chromedrive = 'chromedriver.exe'
+    else:
+        print('This OS is not supported')
+        raise SystemExit
+
     return webdriver.Chrome(executable_path = path_to_chromedrive, chrome_options=chrome_options)
 
 
 def main():
     try:    
         print('Reading login and password from file')
-        with open('personal_data.txt', 'r') as f:
-            data = json.loads(f.read())
-            email = data['login']
-            password = data['password']
+        try:
+            with open('personal_data.txt', 'r') as f:
+                data = json.loads(f.read())
+                email = data['login']
+                password = data['password']
+        except:
+            print("Looks like you don't have personal_data.txt file created or it is corrupted. Enter your facebook email and password and I'll create it for you")
+            email = input('Email: ')
+            password = input('Password: ')
+            os.remove('personal_data.txt')
+            with open('personal_data.txt', 'a+') as f:
+                f.write(json.dumps({'login': email, 'password': password}))
 
         browser = create_driver()
 
