@@ -4,13 +4,10 @@ import json
 import os
 import platform
 
-def get_name(driver, user_profile):
-    current_url = driver.current_url
-    driver.get(user_profile)
+def get_name(driver):
     name,surname = driver.find_element_by_name('q').get_attribute('value').split(' ')
     name = name.capitalize()
     surname = surname.capitalize()
-    driver.get(current_url)
     return (name,surname)
 
 def login(driver, email, password):
@@ -30,22 +27,22 @@ def login(driver, email, password):
     login_button.click()
 
 def scroll_down(browser):
-    SCROLL_PAUSE_TIME = 1.5
+    SCROLL_PAUSE_TIME = 2
     # Get scroll height
     last_height = browser.execute_script("return document.body.scrollHeight")
-
+    last_time = time.time()
     while True:
         # Scroll down to bottom
         browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-        # Wait to load page
-        time.sleep(SCROLL_PAUSE_TIME)
-
-        # Calculate new scroll height and compare with last scroll height
-        new_height = browser.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
+        now = time.time()
+        if now - last_time >= SCROLL_PAUSE_TIME:
+            # Calculate new scroll height and compare with last scroll height
+            new_height = browser.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+            last_time = now
 
 def get_all_friends(browser):
     friends_elements = browser.find_elements_by_xpath('//li[@class="_698"]/div[@data-testid="friend_list_item"]//div[@class="fsl fwb fcb"]/a')
@@ -82,7 +79,8 @@ def create_chrome_options():
         "profile.default_content_setting_values.notifications": 2 #disable notifications
         }
     # https://stackoverflow.com/questions/28070315/python-disable-images-in-selenium-google-chromedriver
-    chrome_options.add_experimental_option("prefs",prefs)
+    chrome_options.add_argument('headless')
+    chrome_options.add_experimental_option("prefs", prefs)
     return chrome_options
 
 def create_driver():
@@ -129,13 +127,12 @@ def main():
 
         print("Getting user's name and surname")
         browser.get("https://www.facebook.com/profile")
-        name,surname = get_name(browser, browser.current_url)
+        name,surname = get_name(browser)
 
         print('Going into friends tab')
-        browser.get('https://www.facebook.com/profile')
         browser.get(browser.current_url[:-2] + '/friends/')
 
-        time.sleep(2)
+        browser.implicitly_wait(2)
         print('Scrolling down')
         scroll_down(browser)
 
@@ -155,8 +152,10 @@ def main():
 
         done_profiles = [user['profile'] for user in current_data]
         for friend in friends:
+            
             print('Processing ' + friend['name'], end = '... ')
             if not friend['profile'] in done_profiles:
+                time_before = time.time()
                 if friend['profile'].startswith('https://www.facebook.com/profile.php?id='):
                     browser.get(friend['profile'] + '&sk=likes')
                 else:
@@ -168,7 +167,7 @@ def main():
                     'likes': get_likes(browser),
                 })
                 done_profiles.append(friend['profile'])
-                print('Done')
+                print(f'Done. Time: {(time.time() - time_before):.2}s')
             else:
                 print('Skipped')
 
@@ -179,6 +178,9 @@ def main():
         try:
             new_file = f"dane_{time.strftime('%d-%m-%Y-%H-%M-%S')}.json"
             with open(new_file, 'a+') as f:
+                json.dump(current_data, f)
+            with open('dane.json', 'a+') as f:
+                f.truncate(0)
                 json.dump(current_data, f)
         except:
             os.remove(new_file)
