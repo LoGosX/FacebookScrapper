@@ -56,6 +56,26 @@ def get_all_friends(browser):
         })
     return friends
 
+def go_to_group_members_page(driver):
+    driver.find_elements_by_css_selector('div[@data-key="members"').click()
+
+def get_group_members(driver):
+    scroll_down(driver)
+    members_elements = driver.find_elements_by_css_selector('#groupsMemberSection_recently_joined ._60ri.fsl.fwb.fcb a:first-of-type')
+    members = []
+    for m in members_elements:
+        user_url = m.get_attribute('href')
+        if user_url.startswith('https://www.facebook.com/profile.php'):
+            user_url = user_url.split('$')[0]
+        else:
+            user_url = user_url.split('?')[0]
+        name = m.text
+        members.append({
+            'name': name,
+            'profile': user_url
+        })
+    return members
+
 def get_likes(browser):
     #likes_elements = browser.find_elements_by_css_selector('.fsl.fwb.fcb')
     likes_elements = browser.find_elements_by_xpath('//div[@class="fsl fwb fcb"]')
@@ -72,19 +92,20 @@ def get_likes(browser):
         })
     return data
 
-def create_chrome_options():
+def create_chrome_options(headless = False):
     chrome_options = webdriver.ChromeOptions()
     prefs = {
         "profile.managed_default_content_settings.images": 2, #disable images
         "profile.default_content_setting_values.notifications": 2 #disable notifications
         }
     # https://stackoverflow.com/questions/28070315/python-disable-images-in-selenium-google-chromedriver
-    chrome_options.add_argument('headless')
+    if headless:
+        chrome_options.add_argument('headless')
     chrome_options.add_experimental_option("prefs", prefs)
     return chrome_options
 
-def create_driver():
-    chrome_options = create_chrome_options()
+def create_driver(headless = False):
+    chrome_options = create_chrome_options(headless)
     system = platform.system() 
     if system == 'Linux':
         path_to_chromedrive = "./chromedriver"
@@ -96,6 +117,17 @@ def create_driver():
 
     return webdriver.Chrome(executable_path = path_to_chromedrive, chrome_options=chrome_options)
 
+def get_user_likes(driver, user):
+    if user['profile'].startswith('https://www.facebook.com/profile.php?id='):
+        driver.get(user['profile'] + '&sk=likes')
+    else:
+        driver.get(user['profile'] + '/likes')
+    scroll_down(driver)
+    return {
+        'name' : user['name'],
+        'profile': user['profile'],
+        'likes': get_likes(driver),
+    }
 
 def main():
     try:    
@@ -156,16 +188,7 @@ def main():
             print('Processing ' + friend['name'], end = '... ')
             if not friend['profile'] in done_profiles:
                 time_before = time.time()
-                if friend['profile'].startswith('https://www.facebook.com/profile.php?id='):
-                    browser.get(friend['profile'] + '&sk=likes')
-                else:
-                    browser.get(friend['profile'] + '/likes')
-                scroll_down(browser)
-                current_data.append({
-                    'name' : friend['name'],
-                    'profile': friend['profile'],
-                    'likes': get_likes(browser),
-                })
+                current_data.append(get_user_likes(d, friend))
                 done_profiles.append(friend['profile'])
                 print(f'Done. Time: {(time.time() - time_before):.2}s')
             else:
@@ -176,7 +199,7 @@ def main():
 
     finally:
         try:
-            new_file = f"dane_{time.strftime('%d-%m-%Y-%H-%M-%S')}.json"
+            new_file = f"data/dane_{time.strftime('%d-%m-%Y-%H-%M-%S')}.json"
             with open(new_file, 'a+') as f:
                 json.dump(current_data, f)
             with open('dane.json', 'a+') as f:
