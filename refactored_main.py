@@ -10,12 +10,13 @@ def get_name(driver):
     surname = surname.capitalize()
     return (name,surname)
 
-def login(driver, email, password, file = None):
+def login(driver, email, password, credentials_file = None):
     try:
-        data = json.loads(file.read())
-        email = data['login']
-        password = data['password']
-    except:
+        with open(credentials_file, 'r') as file:
+            data = json.loads(file.read())
+            email = data['login']
+            password = data['password']
+    except (FileNotFoundError, json.JSONDecodeError) as exception:
         pass
 
     print('Going to facebook login page')
@@ -161,34 +162,53 @@ def create_driver_and_login(email, password, headless = False, file = None):
     return d
 
 def scrap_users_data(driver, users, output_file):
-    with open(output_file, 'r+') as f:
+    with open(output_file, 'r') as f:
         try:
             data = json.load(f)
         except json.JSONDecodeError:
             data = []
-        try:
-            done_profiles = [user['profile'] for user in data]
-            print("Done profiles", done_profiles)
-            for user in users:
-                print('Processing ' + user['name'], end = '... ')
-                if not user['profile'] in done_profiles:
-                    time_before = time.time()
-                    data.append({
-                        'name':user['name'],
-                        'profile':user['profile'],
-                        'likes': get_user_likes(driver, user),
-                    })
-                    done_profiles.append(user['profile'])
-                    print(f'Done. Time: {int(time.time() - time_before)}s')
-                else:
-                    print('Skipped')
-        finally:
+    try:
+        done_profiles = [user['profile'] for user in data]
+        print("Done profiles", done_profiles)
+        for user in users:
+            print('Processing ' + user['name'], end = '... ')
+            if not user['profile'] in done_profiles:
+                time_before = time.time()
+                data.append({
+                    'name':user['name'],
+                    'profile':user['profile'],
+                    'likes': get_user_likes(driver, user),
+                })
+                done_profiles.append(user['profile'])
+                print(f'Done. Time: {int(time.time() - time_before)}s')
+            else:
+                print('Skipped')
+    except:
+        #silently catch KeyboardInterrupt
+        pass
+    finally:
+        with open(output_file, "wt") as f:
             json.dump(data, f)
+        print('\nFile saved')
+    
                 
 
 def main():
+    print(
+    '''
+    #Example usage
+    d = create_driver_and_login("<your email>", "<your password>", [<Headless mode> True/False, <path to file with password and email>])
+    members = get_group_members(d, <group's main page url, like: https://www.facebook.com/groups/gpython/ >)
+    scrap_users_data(d, members, "output_file.txt") #this will skip already processed users in file and update it with new users
+    #to stop at any time press Ctrl+C
+    '''
+    )
     pass
-        
+
+def foo():
+    d = create_driver_and_login("","",True,open("personal_data.txt"))
+    members = get_group_members(d, "https://www.facebook.com/groups/PolitechnikaPoznanska2018/")
+    scrap_users_data(d, members, "data/PP grupa/users.json")  
 
 if __name__ == '__main__':
     main()
