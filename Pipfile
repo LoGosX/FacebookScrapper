@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 selenium = "*"
 ipython = "*"
-"pep8" = "*"
 
 [dev-packages]
 

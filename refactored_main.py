@@ -4,6 +4,11 @@ import json
 import os
 import platform
 
+class BlockedUser(Exception):
+    pass
+
+if not "ignored" in os.listdir('.'):
+    os.mkdir("./ignored")
 
 def get_name(driver):
     name, surname = driver.find_element_by_name(
@@ -41,6 +46,9 @@ def login(driver, email, password, credentials_file=None):
     login_button.click()
     print('Logged in')
 
+def check_if_blocked(driver):
+    page_source = driver.page_source
+    return "Jesteś tymczasowo zablokowany" in page_source or "You're temporarily blocked" in page_source
 
 def scroll_down(browser):
     SCROLL_PAUSE_TIME = 2
@@ -98,7 +106,7 @@ def get_group_members(driver, group_page):
             for m in members_elements:
                 user_url = m.get_attribute('href')
                 if user_url.startswith('https://www.facebook.com/profile.php'):
-                    user_url = user_url.split('$')[0]
+                    user_url = user_url.split('&')[0]
                 else:
                     user_url = user_url.split('?')[0]
                 name = m.text
@@ -119,6 +127,10 @@ def get_user_likes(browser, user):
         browser.get(user['profile'] + '&sk=likes')
     else:
         browser.get(user['profile'] + '/likes')
+    
+    if check_if_blocked(browser):
+        raise BlockedUser
+
     if 'likes' in browser.current_url:
         data = []
         scroll_down(browser)
@@ -185,16 +197,20 @@ def scrap_users_data(driver, users, output_file):
             data = []
     try:
         done_profiles = [user['profile'] for user in data]
-        print("Done profiles", done_profiles)
+        print("Done profiles", len(done_profiles))
         for user in users:
             print('Processing ' + user['name'], end='... ')
             if not user['profile'] in done_profiles:
                 time_before = time.time()
-                data.append({
-                    'name': user['name'],
-                    'profile': user['profile'],
-                    'likes': get_user_likes(driver, user),
-                })
+                try:
+                    data.append({
+                        'name': user['name'],
+                        'profile': user['profile'],
+                        'likes': get_user_likes(driver, user),
+                    })
+                except BlockedUser:
+                    print("You are now blocked")
+                    break
                 done_profiles.append(user['profile'])
                 print(f'Done. Time: {int(time.time() - time_before)}s')
             else:
@@ -221,10 +237,10 @@ def main():
 
 
 def foo():
-    d = create_driver_and_login("", "", True, "personal_data.txt")
+    d = create_driver_and_login("", "", True, "ignored/personal_data.txt")
     members = get_group_members(
         d, "https://www.facebook.com/groups/PolitechnikaPoznanska2018/")
-    scrap_users_data(d, members, "data/PP grupa/users.json")
+    scrap_users_data(d, members, "ignored/data/PP grupa/users.json")
 
 
 if __name__ == '__main__':

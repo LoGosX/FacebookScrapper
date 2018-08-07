@@ -2,3 +2,4 @@ personal_data.txt
 dane*.json
 debug.log
 data/
+ignored/
