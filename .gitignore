@@ -1,5 +1,5 @@
-personal_data.txt
-dane*.json
+credentials.txt
 debug.log
 data/
 ignored/
+output/
