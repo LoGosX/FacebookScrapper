@@ -1,5 +1,4 @@
 credentials.txt
 debug.log
 data/
-ignored/
-output/
+output/*
