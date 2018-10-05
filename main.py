@@ -11,8 +11,8 @@ class BlockedUser(Exception):
     pass
 
 
-if not "ignored" in os.listdir("."):
-    os.mkdir("./ignored")
+if not "output" in os.listdir("."):
+    os.mkdir("./output")
 
 
 def get_name(driver):
